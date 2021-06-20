@@ -1,0 +1,67 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Technical Analysis Wapp</title>
+</head>
+<body>
+   <h1>Scan graph</h1>
+
+   <table>
+    <tr>
+        <form>
+                <label for="start">start: </label>
+                <input type="date" id="start" name="start" required pattern="\d{4}-\d{2}-\d{2}" />
+        
+    </tr>
+    <tr>
+        
+                <label for="end">   end: </label>
+                <input type="date" id="end" name="end" required pattern="\d{4}-\d{2}-\d{2}">
+
+    </tr>
+    
+    <tr>
+                <select name="ticker_c">
+                    <option value="">-- Select a Stock --</option>
+                    {% for key in companies_symbols %}
+                        <option value="{{ key }}" {% if ticker_c == key %}selected="selected"{% endif %}>{{ key }}</option>
+                    {% endfor %}
+                </select>
+    </tr>
+    <tr>
+                <select name="pattern">
+                    <option value="">-- Select a Pattern --</option>
+                    {% for key in candlestick_patterns %}
+                        <option value="{{ key }}" {% if pattern == key %}selected="selected"{% endif %}>{{ candlestick_patterns[key] }}</option>
+                    {% endfor %}
+                </select>
+        
+
+                <input type="submit" value="Scan" />
+        </form>
+    </tr>
+</table>
+
+<table>
+    <tr>
+        <th>    symbol    </th>
+        <th>  company                   </th>
+        <th>             patten result  </th>
+    </tr>
+
+    <tr>
+        <td>
+            {{stock}}
+        </td>
+        <td>
+            {{companies_symbols[stock]}}
+        </td>
+        <td>
+            {{pattern_res}}
+        </td>
+    </tr>
+</table>
+
+
+</body>
+</html>
