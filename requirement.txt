@@ -3,6 +3,6 @@ yfinance
 TA_Lib-0.4.19-cp36-cp36m-win_amd64.whl
 flask
 
-trendet#
+trendet
 #psutil
 #-U kaleido

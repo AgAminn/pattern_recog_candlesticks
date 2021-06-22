@@ -61,3 +61,33 @@ candlestick_patterns = {
     'CDLUPSIDEGAP2CROWS':'Upside Gap Two Crows',
     'CDLXSIDEGAP3METHODS':'Upside/Downside Gap Three Methods'
 }
+
+
+
+
+pattern_of_interest = {
+    'CDLCLOSINGMARUBOZU':'Closing Marubozu',
+    'CDLMARUBOZU':'Marubozu',
+    'CDLENGULFING':'Engulfing Pattern',
+    'CDLEVENINGSTAR':'Evening Star',
+    'CDLHAMMER':'Hammer',
+    'CDLINVERTEDHAMMER':'Inverted Hammer',
+    'CDLHANGINGMAN':'Hanging Man',
+    'CDLSHOOTINGSTAR':'Shooting Star',
+    'CDLSPINNINGTOP':'Spinning Top',
+    
+    'CDLDOJI':'Doji',
+    'CDLDOJISTAR':'Doji Star',
+    'CDLDRAGONFLYDOJI':'Dragonfly Doji',
+    'CDLEVENINGDOJISTAR':'Evening Doji Star',
+    'CDLGRAVESTONEDOJI':'Gravestone Doji',
+    'CDLMORNINGDOJISTAR':'Morning Doji Star',
+
+    'CDLMORNINGSTAR':'Morning Star',
+    'CDLEVENINGSTAR':'Evening Star',
+
+    'CDLPIERCING':'Piercing Pattern',
+    'CDLDARKCLOUDCOVER':'Dark Cloud Cover',
+    'CDL3BLACKCROWS':'Three Black Crows',
+    'CDL3WHITESOLDIERS':'Three Advancing White Soldiers',
+}

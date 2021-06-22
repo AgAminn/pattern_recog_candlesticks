@@ -4,14 +4,19 @@ import re
 import numpy as np
 import pandas as pd
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, timedelta
 import talib
-
+import trendet
 from patterns_dic import candlestick_patterns
 
 #2021-06-21
 #"MERCURYLAB.BO"
-def load_data(ticker_st,start_date,end_date, pattern_name):
+today = datetime.date(datetime.now())
+three_months_ago = today - timedelta(days=90)
+print(today)
+print('3 months ago ',three_months_ago)
+
+def load_data(ticker_st,start_date=three_months_ago,end_date=today, pattern_name=''):
     data = yf.download(ticker_st, start=start_date, end=end_date)
     df_date = pd.to_datetime(data.index)
     tips_filtered = data.reindex(columns =  ['Open', 'High', 'Low', 'Close'])
@@ -31,11 +36,25 @@ def load_data(ticker_st,start_date,end_date, pattern_name):
         pass
     return results
 
-def result_analysis(res_list,pattern_name):
+def load_data_df(ticker_st,start_date=three_months_ago,end_date=today):
+    
+    #df_date = pd.to_datetime(data.index)
+    #tips_filtered = data.reindex(columns =  ['Open', 'High', 'Low', 'Close'])
+    #col_names = list(data.index)
+    try:
+        tik_dum = yf.Ticker(ticker_st)
+        tikp=tik_dum.info['longName']
+        data = yf.download(ticker_st, start=start_date, end=end_date)
+    except:
+        raise ValueError('Loading data failed , check the stock name and date')
+    return data
+
+def result_analysis(pattern_name,res_list):
+    
     trend_st = None # for every other type
     trend_bl_br = None # ofr engulfing only 
     #if res_list:
-    #if pattern_name == 'CDLENGULFING':
+    #if pattern_name == 'CDLENGULFING':............
     if pattern_name == 'CDLENGULFING':
         last = res_list.tail(1).values[0]
         if last > 0:
@@ -75,18 +94,45 @@ def result_analysis(res_list,pattern_name):
         
     return trend_st#,trend_bl_br
 
-
-def trend_detector():
+def pattern_check(data,pattern_name):
     
+    pattern_function = getattr(talib, pattern_name)
+    res_list = None
+    try:
+        res_list = pattern_function(data['Open'],data['High'],data['Low'],data['Close'])
+    except:
+        print('failed ?!')
+        raise ValueError('Loading data failed, problem with data or pattern name')
+    last = res_list.tail(1).values[0]
+    if pattern_name in ['CDLKICKINGBYLENGTH','CDLMARUBOZU','CDLENGULFING','CDLCLOSINGMARUBOZU']:
+        #last = res_list.tail(1).values[0]
+        if last > 0:
+            return 'bullish'
+            #trend_st = candlestick_patterns[pattern_name]
+        elif last < 0:
+            return 'bearish'
+            #trend_st = candlestick_patterns[pattern_name]
+        else:
+            return False
+    else:
+        if last != 0:
+            return True
+        else:
+            return False
+
+'''
+def trend_detector():
+
 
 class patten_detected():
 
     def __init__(self):
         pass
-        
+'''     
 
-def rsi_calc(start_date,end_date) :
-    df = yf.download("MERCURYLAB.BO", start=start_date, end=end_date)
+def rsi_calc(data) :
+    #df = yf.download("MERCURYLAB.BO", start=start_date, end=end_date)
+    df=data
     df_date = pd.to_datetime(df.index)
     df['Up Move'] = np.nan
     df['Down Move'] = np.nan
@@ -119,8 +165,21 @@ def rsi_calc(start_date,end_date) :
         df['RS'][x] = df['Average Up'][x] / df['Average Down'][x]
         df['RSI'][x] = 100 - (100/(1+df['RS'][x]))
     
-    return df['RSI'],df_date
+    return df['RSI']
 
+
+
+def trend_detector(data):
+
+    df1 = trendet.identify_df_trends(df=data,column='Close',window_size=4)
+    lastU = df1['Up Trend'].tail(1).values[0]
+    lastD = df1['Down Trend'].tail(1).values[0]
+    if lastU in ['A','B','C']:
+        return 'UpTrend'
+    elif lastD in ['A','B','C']:
+        return 'DownTrend'
+    else:
+        return 'SW'
 
 if __name__=='__main__':
     '''
@@ -141,9 +200,16 @@ if __name__=='__main__':
     q_res,q_tr = result_analysis(res_f,pattern_name)
     print('querry result ',q_res)
     '''
-    rsi,y_t = rsi_calc(start_date='2020-06-01',end_date='2021-05-17')
+    data = load_data_df(ticker_st="MERCURYLAB.BO")
+    
+    rsi = rsi_calc(data=data)
     print('test RSI',type(rsi))
     print(rsi[-20:])
     print(len(rsi))
     df_date = pd.to_datetime(rsi[-20:].index)
     print(len(df_date))
+    print('official resulrs : ',rsi.tail(1).values[0])
+    
+    
+    #res = pattern_check(data=data,pattern_name='CDLMARUBOZU')
+    #print(res)
