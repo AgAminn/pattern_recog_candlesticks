@@ -1,6 +1,6 @@
 numpy
 pandas
 yfinance 
-https://download.lfd.uci.edu/pythonlibs/r4tycu3t/TA_Lib-0.4.20-cp37-cp37m-win_amd64.whl
+talib-binary
 flask
 trendet
