@@ -1,4 +1,4 @@
-from os import P_DETACH
+from os import P_DETACH, stat
 import os
 import re
 import numpy as np
@@ -7,12 +7,14 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import talib
 import trendet
+from yfinance import ticker
 from patterns_dic import candlestick_patterns
 
 #2021-06-21
 #"MERCURYLAB.BO"
-today = datetime.date(datetime.now())
-three_months_ago = today - timedelta(days=90)
+qtoday = datetime.date(datetime.now())
+today = datetime.date(datetime.now()) + timedelta(days=2)
+three_months_ago = today - timedelta(days=180)
 print(today)
 print('3 months ago ',three_months_ago)
 
@@ -68,26 +70,7 @@ def result_analysis(pattern_name,res_list):
         else:
             trend_bl_br = None
             trend_st = None
-    '''
-    if pattern_name == 'CDLHAMMER':
-        last = res_list.tail(1).values[0]
-        if last > 0:
-            trend_st = 'Hammer'
-        else:
-            trend_st = None
-    if pattern_name == 'CDLINVERTEDHAMMER':
-        last = res_list.tail(1).values[0]
-        if last > 0:
-            trend_st = 'Inverted Hammer'
-        else:
-            trend_st = None
-    if pattern_name == 'CDLHANGINGMAN':
-        last = res_list.tail(1).values[0]
-        if last < 0:
-            trend_st = 'Hanging Man'
-        else:
-            trend_st = None
-    '''
+
     last = res_list.tail(1).values[0]
     if last != 0:
         trend_st = 'True'#candlestick_patterns[pattern_name]
@@ -172,14 +155,273 @@ def rsi_calc(data) :
 def trend_detector(data):
 
     df1 = trendet.identify_df_trends(df=data,column='Close',window_size=4)
+    print(df1.head(5))
+    for col in df1.columns:
+        print(col)
     lastU = df1['Up Trend'].tail(1).values[0]
     lastD = df1['Down Trend'].tail(1).values[0]
-    if lastU in ['A','B','C']:
+    if lastU != None:
         return 'UpTrend'
-    elif lastD in ['A','B','C']:
+    elif lastD != None:
         return 'DownTrend'
     else:
         return 'SW'
+
+
+class adv_patterns():
+    def __init__(self,ticker_company,n_months_data=5):
+        import numpy as np
+        self.tkr = ticker_company
+        try:
+            data_orig = yf.download(self.tkr, start=today-timedelta(n_months_data*30), end=today)
+        except:
+            print('error loading data')
+            raise ValueError('Loading data failed , check the stock name and date')
+        
+        Xt,Yt,data_ed = self.init_data(data=data_orig.copy())
+
+        ptx_m,pty_m = self.local_min(x_data=Xt,y_data=Yt,data=data_ed['SMA'])
+        print(pty_m)
+        ptx_M,pty_M = self.local_max(x_data=Xt,y_data=Yt,data=data_ed['SMA'])
+
+        self.Xt , self.Yt = self.filter_pt(ptx_min=ptx_m,pty_min=pty_m,ptx_max=ptx_M,pty_max=pty_M)
+
+
+
+    @staticmethod
+    def init_data(data):
+        data['SMA'] = data['Close'].rolling(5).mean()
+        
+        y_sma = data['SMA'].values.tolist()
+        xt = list(data.index)
+        x_data = []
+        y_data = []
+        
+        for i in range(len(y_sma)):
+            if y_sma[i] != None:
+                x_data.append(xt[i])
+                y_data.append(y_sma[i])
+        
+        return x_data,y_data,data
+    @staticmethod
+    def local_min(x_data,y_data,data):
+        #           ___ detection of local minimums and maximums ___
+        l_min = (np.diff(np.sign(np.diff(y_data))) > 0).nonzero()[0] + 1      # local min
+        
+        y_min = []
+        x_min_d =[]
+        for v in l_min:
+            y_min.append(y_data[v])
+            x_min_d.append(x_data[v])
+
+        #extend the suspected x range:
+        delta = 10   # how many ticks to the left and to the right from local minimum on x axis
+
+        dict_i = dict()
+        dict_x = dict()
+
+        df_len = len(data.index)                    # number of rows in dataset
+
+        for element in l_min:                            # x coordinates of suspected minimums
+            l_bound = element - delta                    # lower bound (left)
+            u_bound = element + delta                    # upper bound (right)
+            x_range = range(l_bound, u_bound + 1)        # range of x positions where we SUSPECT to find a low
+            dict_x[element] = x_range                    # just helpful dictionary that holds suspected x ranges for further visualization strips
+            
+            #print('x_range: ', x_range)
+            
+            y_loc_list = list()
+            for x_element in x_range:
+                #print('-----------------')
+                if x_element > 0 and x_element < df_len:                # need to stay within the dataframe
+                    #y_loc_list.append(ticker_df.Low.iloc[x_element])   # list of suspected y values that can be a minimum
+                    y_loc_list.append(data.iloc[x_element])
+                    #print(y_loc_list)
+                    #print('ticker_df.Low.iloc[x_element]', ticker_df.Low.iloc[x_element])
+            dict_i[element] = y_loc_list                 # key in element is suspected x position of minimum
+                                                        # to each suspected minimums we append the price values around that x position
+                                                        # so 40: [53.70000076293945, 53.93000030517578, 52.84000015258789, 53.290000915527344]
+                                                        # x position: [ 40$, 39$, 41$, 45$]
+        #print('DICTIONARY for l_min: ', dict_i)
+        y_delta = 0.12                               # percentage distance between average lows
+        threshold = min(data) * 1.15      # setting threshold higher than the global low
+
+        y_dict = dict()
+        mini = list()
+        suspected_bottoms = list()
+                                                    #   BUG somewhere here
+        for key in dict_i.keys():                     # for suspected minimum x position  
+            mn = sum(dict_i[key])/len(dict_i[key])    # this is averaging out the price around that suspected minimum
+                                                    # if the range of days is too high the average will not make much sense
+                
+            price_min = min(dict_i[key])    
+            mini.append(price_min)                    # lowest value for price around suspected 
+            
+            l_y = mn * (1.0 - y_delta)                #these values are trying to get an U shape, but it is kinda useless 
+            u_y = mn * (1.0 + y_delta)
+            y_dict[key] = [l_y, u_y, mn, price_min]
+
+        for key_i in y_dict.keys():    
+            for key_j in y_dict.keys():    
+                if (key_i != key_j) and (y_dict[key_i][3] < threshold):
+                    suspected_bottoms.append(key_i)
+        y_min = []
+        x_min_d =[]
+        for v in l_min:
+            y_min.append(y_data[v])
+            x_min_d.append(x_data[v])
+        
+        return x_min_d,y_min
+    
+    @staticmethod
+    def local_max(x_data,y_data,data):
+        #           ___ detection of local minimums and maximums ___
+        l_max = (np.diff(np.sign(np.diff(y_data))) < 0).nonzero()[0] + 1      # local max
+        
+        y_max = []
+        x_max_d =[]
+        for v in l_max:
+            y_max.append(y_data[v])
+            x_max_d.append(x_data[v])
+
+        #extend the suspected x range:
+        delta = 10                                       # how many ticks to the left and to the right from local minimum on x axis
+
+        dict_i = dict()
+        dict_x = dict()
+
+        df_len = len(data.index)                    # number of rows in dataset
+
+        for element in l_max:                            # x coordinates of suspected minimums
+            l_bound = element - delta                    # lower bound (left)
+            u_bound = element + delta                    # upper bound (right)
+            x_range = range(l_bound, u_bound + 1)        # range of x positions where we SUSPECT to find a low
+            dict_x[element] = x_range                    # just helpful dictionary that holds suspected x ranges for further visualization strips
+            
+            #print('x_range: ', x_range)
+            
+            y_loc_list = list()
+            for x_element in x_range:
+                #print('-----------------')
+                if x_element > 0 and x_element < df_len:                # need to stay within the dataframe
+                    #y_loc_list.append(ticker_df.Low.iloc[x_element])   # list of suspected y values that can be a minimum
+                    y_loc_list.append(data.iloc[x_element])
+                    #print(y_loc_list)
+                    #print('ticker_df.Low.iloc[x_element]', ticker_df.Low.iloc[x_element])
+            dict_i[element] = y_loc_list                 # key in element is suspected x position of minimum
+                                                        # to each suspected minimums we append the price values around that x position
+                                                        # so 40: [53.70000076293945, 53.93000030517578, 52.84000015258789, 53.290000915527344]
+                                                        # x position: [ 40$, 39$, 41$, 45$]
+        #print('DICTIONARY for l_min: ', dict_i)
+        y_delta = 0.12                               # percentage distance between average lows
+        threshold = max(data) * 1.15      # setting threshold higher than the global low
+
+        y_dict = dict()
+        mini = list()
+        suspected_bottoms = list()
+                                                    #   BUG somewhere here
+        for key in dict_i.keys():                     # for suspected minimum x position  
+            mn = sum(dict_i[key])/len(dict_i[key])    # this is averaging out the price around that suspected minimum
+                                                    # if the range of days is too high the average will not make much sense
+                
+            price_min = max(dict_i[key])    
+            mini.append(price_min)                    # lowest value for price around suspected 
+            
+            l_y = mn * (1.0 - y_delta)                #these values are trying to get an U shape, but it is kinda useless 
+            u_y = mn * (1.0 + y_delta)
+            y_dict[key] = [l_y, u_y, mn, price_min]
+
+        #print('SCREENING FOR DOUBLE BOTTOM:')    
+            
+        for key_i in y_dict.keys():    
+            for key_j in y_dict.keys():    
+                if (key_i != key_j) and (y_dict[key_i][3] < threshold):
+                    suspected_bottoms.append(key_i)
+
+        y_min = []
+        x_min_d =[]
+        for v in l_max:
+            y_min.append(y_data[v])
+            x_min_d.append(x_data[v])
+        #print('min dates  ',x_min_d)
+        return x_min_d,y_min
+
+    @staticmethod
+    def filter_pt (ptx_min,pty_min,ptx_max,pty_max):
+        ptx = ptx_min+ptx_max
+        pty = pty_min+pty_max
+        print('len ptx --------------------- ',len(pty))
+        #sorting
+        #print('date ',ptx)
+        PTs = []
+        for i in range(len(ptx)):
+            PTs.append((ptx[i],pty[i]))
+        ptx = sorted(ptx) #ptx.sort()
+        print('rest pts ++++++++++++++++++', pty)
+        PTsx = [tuple for x in ptx for tuple in PTs if tuple[0] == x]
+        print('rest pts_X ++++++++++++++++++', PTsx)
+        pty = []
+        for y in PTsx:
+            pty.append(y[1])
+        #filter
+        ptX_s = []
+        ptY_s = []
+        print('len ptx --------------------- ',len(pty))
+        for i in range(len(ptx)-1):
+            if abs( pty[i]-pty[i+1] ) > 0.5:
+                ptX_s.append(ptx[i])
+                ptY_s.append(pty[i])
+
+        return ptX_s,ptY_s
+
+    def find_patterns(self,pat_name):
+        from collections import defaultdict  
+        max_min = self.Yt
+        patterns = defaultdict(list)
+        
+        
+        # Window range is 5 units
+        res_i = 0
+        for i in range(5, len(max_min)):  
+            window = max_min[i-5:i]
+            
+            # Pattern must play out in less than n units
+            if window[-1] - window[0] > 100:  
+                print('pass *')    
+                continue   
+                
+            a, b, c, d, e = window[0:5]
+            mini_pat_dic = {
+                'Head and Shoulders' : (a>b and c>a and c>e and c>d and e>d and abs(b-d)<=np.mean([b,d])*0.1),
+                'Inv Head and Shoulders': (a<b and c<a and c<e and c<d and e<d and abs(b-d)<=np.mean([b,d])*0.1),
+                'Double Bottom' : (c<a and b<c and d<c and c<e and abs(b-d)<=np.mean([b,d])*0.1),
+                'Double Top' : (c>a and b>c and d>c and c>e and abs(b-d)<=np.mean([b,d])*0.1),
+                'Bullish penant' :(a<b and c<a and c<b and c<d and d<b and e<d and e>c and (b-d)>=np.mean([b,d])*0.1 and (e-c)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2])  ), # Bu - pen
+                'Bearish pennant' :(a>b and c>a and c>b and c>d and d>b and e>d and e<c and (d-b)>=np.mean([b,d])*0.1 and (c-e)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2]) ), # Be - pen
+                'falling wedge' :(a>c and c>e and c>b and e>b and b>d and c>b and (b-d)>=np.mean([b,d])*0.1 and (c-e)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2]) ), # falling wedge
+                'Rising wedge' :(a<c and c<e and e<b and b<d and b<d and (d-b)>=np.mean([b,d])*0.1 and (e-c)>=np.mean([c,e])*0.1 and abs(b-d)<abs(e-c) ), #rising wedge
+                'bullish flag' :(a>c and c>b and b>d and c<e and abs(b-d)in[abs(a-c)*0.8,abs(a-c)*1.2]), #bu flag
+                'Bearish flag' : (a<c and c<b and b<d and c>e  and abs(b-d)in[abs(a-c)*0.8,abs(a-c)*1.2] )
+            }            
+            # IHS
+            #if a<b and c<a and c<e and c<d and e<d and abs(b-d)<=np.mean([b,d])*0.1: # IHS
+            #if c<a and b<c and d<c and c<e and abs(b-d)<=np.mean([b,d])*0.1 :# DB
+            #if c>a and b>c and d>c and c>e and abs(b-d)<=np.mean([b,d])*0.1 :#DT
+            #if a>b and c>a and c>e and c>d and e>d and abs(b-d)<=np.mean([b,d])*0.1: # HS
+            #if a<b and c<a and c<b and c<d and d<b and e<d and e>c and (b-d)>=np.mean([b,d])*0.1 and (e-c)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2]): # Bu - pen
+            #if a>b and c>a and c>b and c>d and d>b and e>d and e<c and (d-b)>=np.mean([b,d])*0.1 and (c-e)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2]): # Be - pen
+            #if a>c and c>e and c>b and e>b and b>d and c>b and (b-d)>=np.mean([b,d])*0.1 and (c-e)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2]): # falling wedge
+            #if a<c and c<e and e<b and b<d and b<d and (d-b)>=np.mean([b,d])*0.1 and (e-c)>=np.mean([c,e])*0.1 and abs(b-d)<abs(e-c) : #rising wedge
+            #if a>c and c>b and b>d and c<e and abs(b-d)in[abs(a-c)*0.8,abs(a-c)*1.2] : #bu flag
+            #if a<c and c<b and b<d and c>e  and abs(b-d)in[abs(a-c)*0.8,abs(a-c)*1.2] : #be flag
+            if mini_pat_dic[pat_name]:
+                patterns['IHS'].append((window[0], window[-1]))
+            
+        if patterns != {}:
+            return True
+
+        return False#patterns
+
 
 if __name__=='__main__':
     '''
@@ -201,7 +443,10 @@ if __name__=='__main__':
     print('querry result ',q_res)
     '''
     data = load_data_df(ticker_st="MERCURYLAB.BO")
-    
+    print(data.tail(5))
+    tr = trend_detector(data=data)
+    print(tr)
+    '''
     rsi = rsi_calc(data=data)
     print('test RSI',type(rsi))
     print(rsi[-20:])
@@ -209,7 +454,7 @@ if __name__=='__main__':
     df_date = pd.to_datetime(rsi[-20:].index)
     print(len(df_date))
     print('official resulrs : ',rsi.tail(1).values[0])
-    
+    '''
     
     #res = pattern_check(data=data,pattern_name='CDLMARUBOZU')
     #print(res)

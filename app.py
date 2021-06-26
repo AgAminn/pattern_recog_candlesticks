@@ -11,7 +11,7 @@ from yfinance import ticker
 
 from comapny_symbol_dic import company_stock_symbol as company_dictionary
 from patterns_dic import candlestick_patterns,pattern_of_interest
-from pattern_detector import load_data,result_analysis,today,pattern_check,load_data_df,rsi_calc,trend_detector
+from pattern_detector import load_data,result_analysis,qtoday,pattern_check,load_data_df,rsi_calc,trend_detector,adv_patterns
 
 app = Flask(__name__)
 
@@ -46,9 +46,11 @@ def update_companies_info(tkr0):
             raise ValueError('Loading data failed , check the stock name and date')
         
         data = load_data_df(ticker_st=tkr0)
+        data_l = adv_patterns(ticker_company=tkr0)
         print(data.head(5))
+        #print('data date ',)
         new_ib = {
-            'date' : today,
+            'date' : qtoday,
             'ticker/Symbol' : tkr0,
             'company_name' : c_name.info['longName']
         }
@@ -59,11 +61,22 @@ def update_companies_info(tkr0):
         rsi_df = rsi_calc(data=data)
         new_ib['RSI']=rsi_df.tail(1).values[0]
 
-        new_ib['Trend']=trend_detector(data)
+        new_ib['Trend']=trend_detector(data=data)
+        
+        new_ib['Head and Shoulders']=data_l.find_patterns('Head and Shoulders')
+        new_ib['Inv Head and Shoulders']=data_l.find_patterns('Inv Head and Shoulders')
+        new_ib['Double Bottom']=data_l.find_patterns('Double Bottom')
+        new_ib['Double Top']=data_l.find_patterns('Double Top')
+        new_ib['Bullish penant']=data_l.find_patterns('Bullish penant')
+        new_ib['Bearish pennant']=data_l.find_patterns('Bearish pennant')
+        new_ib['falling wedge']=data_l.find_patterns('falling wedge')
+        new_ib['Rising wedge']=data_l.find_patterns('Rising wedge')
+        new_ib['bullish flag']=data_l.find_patterns('bullish flag')
+        new_ib['Bearish flag']=data_l.find_patterns('Bearish flag')
         #info_c.append(new_ib)
 
     return jsonify(new_ib)
-'''
+
 @app.route('/')
 def index():
     companies_symbols = company_dictionary.keys()
@@ -86,6 +99,6 @@ def index():
         pattern_res = result_analysis(res_list=list_feed,pattern_name=pattern)
     return render_template('index02.html',companies_symbols=company_dictionary, candlestick_patterns=candlestick_patterns,
 pattern_res=pattern_res,stock=tiker_stock)
-'''
+
 if __name__=='__main__':
-    app.run()
+    app.run(debug=True)
