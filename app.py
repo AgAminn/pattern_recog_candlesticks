@@ -15,7 +15,7 @@ from pattern_detector import load_data,result_analysis,qtoday,pattern_check,load
 
 app = Flask(__name__)
 
-@app.route('/update_companies_info/<tkr0>')
+@app.route('/update_companies_info/<tkr0>',methods=['GET'])
 def update_companies_info(tkr0):
     '''
     with open('datasets/companies.csv') as f:
@@ -36,7 +36,7 @@ def update_companies_info(tkr0):
     }
     '''
 
-    if 1==1:#request.method == 'GET':
+    if request.method == 'GET':
         #tkr = request.form['ticker']
         #c_name = yf.Ticker(str(tkr0))
         #print(c_name)
@@ -76,7 +76,7 @@ def update_companies_info(tkr0):
         #info_c.append(new_ib)
 
     return jsonify(new_ib)
-'''
+
 @app.route('/')
 def index():
     companies_symbols = company_dictionary.keys()
@@ -99,6 +99,6 @@ def index():
         pattern_res = result_analysis(res_list=list_feed,pattern_name=pattern)
     return render_template('index02.html',companies_symbols=company_dictionary, candlestick_patterns=candlestick_patterns,
 pattern_res=pattern_res,stock=tiker_stock)
-'''
+
 if __name__=='__main__':
-    app.run()
+    app.run(debug=True)
