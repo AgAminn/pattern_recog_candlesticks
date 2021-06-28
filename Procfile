@@ -1,1 +1,1 @@
-web: gunicorn wsgi:app
+web: gunicorn wsgi:app --host=0.0.0.0 --port=${PORT:port: process.env.PORT || 5000}
