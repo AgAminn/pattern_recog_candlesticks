@@ -1,13 +1,13 @@
-from typing import List
+#from typing import List
 from flask import Flask, render_template, request, escape,jsonify
 
 import talib
 from werkzeug.exceptions import MethodNotAllowed
 import yfinance as yf
 
-import os, csv
+#import os, csv
 
-from yfinance import ticker
+#from yfinance import ticker
 
 from comapny_symbol_dic import company_stock_symbol as company_dictionary
 from patterns_dic import candlestick_patterns,pattern_of_interest

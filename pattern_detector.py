@@ -1,13 +1,13 @@
-from os import P_DETACH, stat
-import os
-import re
+#from os import P_DETACH, stat
+#import os
+#import re
 import numpy as np
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
 import talib
 import trendet
-from yfinance import ticker
+#from yfinance import ticker
 from patterns_dic import candlestick_patterns
 
 #2021-06-21
