@@ -189,8 +189,8 @@ class adv_patterns():
 
 
     @staticmethod
-    def init_data(data):
-        data['SMA'] = data['Close'].rolling(5).mean()
+    def init_data(data,sampling=5):
+        data['SMA'] = data['Close'].rolling(sampling).mean()
         
         y_sma = data['SMA'].values.tolist()
         xt = list(data.index)
@@ -350,23 +350,23 @@ class adv_patterns():
     def filter_pt (ptx_min,pty_min,ptx_max,pty_max):
         ptx = ptx_min+ptx_max
         pty = pty_min+pty_max
-        print('len ptx --------------------- ',len(pty))
+        #print('len ptx --------------------- ',len(pty))
         #sorting
         #print('date ',ptx)
         PTs = []
         for i in range(len(ptx)):
             PTs.append((ptx[i],pty[i]))
         ptx = sorted(ptx) #ptx.sort()
-        print('rest pts ++++++++++++++++++', pty)
+        #print('rest pts ++++++++++++++++++', pty)
         PTsx = [tuple for x in ptx for tuple in PTs if tuple[0] == x]
-        print('rest pts_X ++++++++++++++++++', PTsx)
+        #print('rest pts_X ++++++++++++++++++', PTsx)
         pty = []
         for y in PTsx:
             pty.append(y[1])
         #filter
         ptX_s = []
         ptY_s = []
-        print('len ptx --------------------- ',len(pty))
+        #print('len ptx --------------------- ',len(pty))
         for i in range(len(ptx)-1):
             if abs( pty[i]-pty[i+1] ) > 0.5:
                 ptX_s.append(ptx[i])
@@ -378,6 +378,7 @@ class adv_patterns():
         from collections import defaultdict  
         max_min = self.Yt
         patterns = defaultdict(list)
+        date_patterns = {}
         
         
         # Window range is 5 units
@@ -387,13 +388,13 @@ class adv_patterns():
             
             # Pattern must play out in less than n units
             if window[-1] - window[0] > 100:  
-                print('pass *')    
+                #print('pass *')    
                 continue   
                 
             a, b, c, d, e = window[0:5]
             mini_pat_dic = {
-                'Head and Shoulders' : (a>b and c>a and c>e and c>d and e>d and abs(b-d)<=np.mean([b,d])*0.1),
-                'Inv Head and Shoulders': (a<b and c<a and c<e and c<d and e<d and abs(b-d)<=np.mean([b,d])*0.1),
+                #'Head and Shoulders' : (a>b and c>a and c>e and c>d and e>d and abs(b-d)<=np.mean([b,d])*0.1),
+                #'Inv Head and Shoulders': (a<b and c<a and c<e and c<d and e<d and abs(b-d)<=np.mean([b,d])*0.1),
                 'Double Bottom' : (c<a and b<c and d<c and c<e and abs(b-d)<=np.mean([b,d])*0.1),
                 'Double Top' : (c>a and b>c and d>c and c>e and abs(b-d)<=np.mean([b,d])*0.1),
                 'Bullish penant' :(a<b and c<a and c<b and c<d and d<b and e<d and e>c and (b-d)>=np.mean([b,d])*0.1 and (e-c)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2])  ), # Bu - pen
@@ -402,25 +403,146 @@ class adv_patterns():
                 'Rising wedge' :(a<c and c<e and e<b and b<d and b<d and (d-b)>=np.mean([b,d])*0.1 and (e-c)>=np.mean([c,e])*0.1 and abs(b-d)<abs(e-c) ), #rising wedge
                 'bullish flag' :(a>c and c>b and b>d and c<e and abs(b-d)in[abs(a-c)*0.8,abs(a-c)*1.2]), #bu flag
                 'Bearish flag' : (a<c and c<b and b<d and c>e  and abs(b-d)in[abs(a-c)*0.8,abs(a-c)*1.2] )
-            }            
-            # IHS
-            #if a<b and c<a and c<e and c<d and e<d and abs(b-d)<=np.mean([b,d])*0.1: # IHS
-            #if c<a and b<c and d<c and c<e and abs(b-d)<=np.mean([b,d])*0.1 :# DB
-            #if c>a and b>c and d>c and c>e and abs(b-d)<=np.mean([b,d])*0.1 :#DT
-            #if a>b and c>a and c>e and c>d and e>d and abs(b-d)<=np.mean([b,d])*0.1: # HS
-            #if a<b and c<a and c<b and c<d and d<b and e<d and e>c and (b-d)>=np.mean([b,d])*0.1 and (e-c)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2]): # Bu - pen
-            #if a>b and c>a and c>b and c>d and d>b and e>d and e<c and (d-b)>=np.mean([b,d])*0.1 and (c-e)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2]): # Be - pen
-            #if a>c and c>e and c>b and e>b and b>d and c>b and (b-d)>=np.mean([b,d])*0.1 and (c-e)>=np.mean([c,e])*0.1 and (abs(b-d)in [abs(e-c)*0.8,abs(e-c)*1.2]): # falling wedge
-            #if a<c and c<e and e<b and b<d and b<d and (d-b)>=np.mean([b,d])*0.1 and (e-c)>=np.mean([c,e])*0.1 and abs(b-d)<abs(e-c) : #rising wedge
-            #if a>c and c>b and b>d and c<e and abs(b-d)in[abs(a-c)*0.8,abs(a-c)*1.2] : #bu flag
-            #if a<c and c<b and b<d and c>e  and abs(b-d)in[abs(a-c)*0.8,abs(a-c)*1.2] : #be flag
+            }
+
             if mini_pat_dic[pat_name]:
                 patterns['IHS'].append((window[0], window[-1]))
+                date_patterns[pat_name]=(self.Xt[i-5],self.Xt[i])
             
         if patterns != {}:
-            return True
+            return date_patterns
 
         return False#patterns
+
+    
+    def find_patterns_HS(self,pat_name):
+        from collections import defaultdict  
+        max_min = self.Yt
+        patterns = defaultdict(list)
+        date_patterns = {}
+        
+        
+        # Window range is 5 units
+        for i in range(7, len(max_min)):  
+            window = max_min[i-7:i]
+            
+            # Pattern must play out in less than n units
+            if window[-1] - window[0] > 100:  
+                #print('pass *')    
+                continue   
+                
+            a, b, c, d, e ,f ,g = window[0:7]
+            mini_pat_dic = {
+                'Head and Shoulders' : (a<c and c<b and b<d and d>f and f>e and g<e and abs(e-c)<=np.mean([e,c])*0.1),
+                'Inv Head and Shoulders': (a>c and c>b and b>d and e>b and f<e and f>d and g>e #and h<g and h > f and j>g
+                and abs(e-c)<=np.mean([c,e])*0.1  ) #and h in [e*0.85,e*1.15]
+                }
+
+            if mini_pat_dic[pat_name]:
+                #patterns['IHS'].append((window[0], window[-1]))
+                date_patterns=(self.Xt[i-5],self.Xt[i])
+            
+        if date_patterns != {}:
+            return date_patterns
+
+        return False#patterns
+
+    def find_patterns_flag(self,pat_name):
+        from collections import defaultdict  
+        max_min = self.Yt
+        patterns = defaultdict(list)
+        date_patterns = {}
+        
+        
+        # Window range is 5 units
+        for i in range(6, len(max_min)):  
+            window = max_min[i-6:i]
+            
+            # Pattern must play out in less than n units
+            if window[-1] - window[0] > 100:  
+                #print('pass *')    
+                continue   
+                
+            a, b, c, d, e ,f = window[0:6]
+            mini_pat_dic = {
+                'Bullish penant' : (a<c and c<e and e<d and d<b and b<f and abs(b-d)in [abs(c-e)*0.9,abs(c-e)*1.1]),
+                'Bearish penant': (a>c and c>e and e>d and d>b and b>f and abs(b-d)in [abs(c-e)*0.9,abs(c-e)*1.1]),
+
+                'Rising wedge' : (a<c and c<e and e<b and b<d and d<f and abs(b-d)in [abs(d-f)*0.9,abs(d-f)*1.1]),
+                'Falling wedge': (a>c and c>e and e>b and b>d and d>f and abs(b-d)in [abs(d-f)*0.9,abs(d-f)*1.1]),
+
+                'Bullish flag': (a<e and e<c and c<d and d<b and b<f and abs(b-d)in [abs(c-e)*0.9,abs(c-e)*1.1]),
+                'Bearish flag': (a>e and e>c and e>d and d>b and b>f and abs(b-d)in [abs(c-e)*0.9,abs(c-e)*1.1])
+                }
+
+            if mini_pat_dic[pat_name]:
+                #patterns['IHS'].append((window[0], window[-1]))
+                date_patterns=(self.Xt[i-6],self.Xt[i])
+            
+        if date_patterns != {}:
+            return date_patterns
+
+        return False#patterns
+
+    def find_patterns_flag_wedge(self,pat_name):
+        from collections import defaultdict  
+        max_min = self.Yt
+        patterns = defaultdict(list)
+        date_patterns = {}
+        
+        
+        # Window range is 5 units
+        for i in range(7, len(max_min)):  
+            window = max_min[i-7:i]
+            
+            # Pattern must play out in less than n units
+            if window[-1] - window[0] > 100:  
+                #print('pass *')    
+                continue   
+                
+            a, b, c, d, e ,f,g = window[0:7]
+            mini_pat_dic = {
+                'Rising wedge' : (a<c and c<e and e<b and b<d and d<f and abs(b-d)in [abs(d-f)*0.9,abs(d-f)*1.1]),
+                'Falling wedge': (a>c and c>e and e>b and b>d and d>f and abs(b-d)in [abs(d-f)*0.9,abs(d-f)*1.1])
+                }
+
+            if mini_pat_dic[pat_name]:
+                #patterns['IHS'].append((window[0], window[-1]))
+                date_patterns=(self.Xt[i-6],self.Xt[i])
+            
+        if date_patterns != {}:
+            return date_patterns
+
+        return False#patterns
+
+    def find_patterns_D(self,pat_name):
+        from collections import defaultdict  
+        max_min = self.Yt
+        date_patterns = {}
+        
+        
+        # Window range is 5 units
+        for i in range(5, len(max_min)):  
+            window = max_min[i-5:i]
+            
+            # Pattern must play out in less than n units
+            if window[-1] - window[0] > 100:  
+                #print('pass *')    
+                continue   
+                
+            a, b, c, d, e = window[0:5]
+            mini_pat_dic = {
+                'Double Bottom' : (c<a and b<c and d<c and c<e and abs(b-d)<=np.mean([b,d])*0.1),
+                'Double Top' : (c>a and b>c and d>c and c>e and abs(b-d)<=np.mean([b,d])*0.1)
+                }
+
+            if mini_pat_dic[pat_name]:
+                date_patterns=(self.Xt[i-5],self.Xt[i])
+            
+        if date_patterns != {}:
+            return date_patterns
+
+        return False
 
 
 if __name__=='__main__':
@@ -458,3 +580,18 @@ if __name__=='__main__':
     
     #res = pattern_check(data=data,pattern_name='CDLMARUBOZU')
     #print(res)
+    data_l = adv_patterns(ticker_company="GOOG")
+    new_ib = {}
+    new_ib['Head and Shoulders']=data_l.find_patterns_HS('Head and Shoulders')
+    
+    new_ib['Inv Head and Shoulders']=data_l.find_patterns_HS('Inv Head and Shoulders')
+    new_ib['Double Bottom']=data_l.find_patterns_D('Double Bottom')
+    new_ib['Double Top']=data_l.find_patterns_D('Double Top')
+    print(new_ib)
+    new_ib['Bullish penant']=data_l.find_patterns_flag('Bullish penant')
+    new_ib['Bearish penant']=data_l.find_patterns_flag('Bearish penant')
+    new_ib['Falling wedge']=data_l.find_patterns_flag('Falling wedge')
+    new_ib['Rising wedge']=data_l.find_patterns_flag('Rising wedge')
+    new_ib['Bullish flag']=data_l.find_patterns_flag('Bullish flag')
+    new_ib['Bearish flag']=data_l.find_patterns_flag('Bearish flag')
+    

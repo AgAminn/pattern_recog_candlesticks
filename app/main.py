@@ -63,19 +63,42 @@ def update_companies_info(tkr0):
 
         new_ib['Trend']=trend_detector(data=data)
         
-        new_ib['Head and Shoulders']=data_l.find_patterns('Head and Shoulders')
-        new_ib['Inv Head and Shoulders']=data_l.find_patterns('Inv Head and Shoulders')
-        new_ib['Double Bottom']=data_l.find_patterns('Double Bottom')
-        new_ib['Double Top']=data_l.find_patterns('Double Top')
-        new_ib['Bullish penant']=data_l.find_patterns('Bullish penant')
-        new_ib['Bearish pennant']=data_l.find_patterns('Bearish pennant')
-        new_ib['falling wedge']=data_l.find_patterns('falling wedge')
-        new_ib['Rising wedge']=data_l.find_patterns('Rising wedge')
-        new_ib['bullish flag']=data_l.find_patterns('bullish flag')
-        new_ib['Bearish flag']=data_l.find_patterns('Bearish flag')
+        new_ib['Head and Shoulders']=data_l.find_patterns_HS('Head and Shoulders')
+        new_ib['Inv Head and Shoulders']=data_l.find_patterns_HS('Inv Head and Shoulders')
+        new_ib['Double Bottom']=data_l.find_patterns_D('Double Bottom')
+        new_ib['Double Top']=data_l.find_patterns_D('Double Top')
+        new_ib['Bullish penant']=data_l.find_patterns_flag('Bullish penant')
+        new_ib['Bearish penant']=data_l.find_patterns_flag('Bearish penant')
+        new_ib['Falling wedge']=data_l.find_patterns_flag('Falling wedge')
+        new_ib['Rising wedge']=data_l.find_patterns_flag('Rising wedge')
+        new_ib['Bullish flag']=data_l.find_patterns_flag('Bullish flag')
+        new_ib['Bearish flag']=data_l.find_patterns_flag('Bearish flag')
         #info_c.append(new_ib)
 
     return jsonify(new_ib)
+
+
+@app.route('/talib_info/<tkr0>',methods=['GET'])
+def talib_info(tkr0):
+
+    if request.method == 'GET':
+        try:
+            c_name = yf.Ticker(str(tkr0))
+        except:
+            raise ValueError('Loading data failed , check the stock name and date')
+        
+        data = load_data_df(ticker_st=tkr0)
+        new_ib = {
+            'date' : qtoday,
+            'ticker/Symbol' : tkr0,
+            'company_name' : c_name.info['longName']
+        }
+        for pat in candlestick_patterns.keys():
+            label = pattern_check(data=data,pattern_name=pat)
+            new_ib[candlestick_patterns[pat]]=label
+    return jsonify(new_ib)
+    
+
 
 @app.route('/')
 def index():
