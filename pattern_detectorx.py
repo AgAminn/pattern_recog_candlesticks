@@ -51,6 +51,22 @@ def load_data_df(ticker_st,start_date=three_months_ago,end_date=today):
         raise ValueError('Loading data failed , check the stock name and date')
     return data
 
+class data_loader_df ():
+    def __init__(self,ticker_st,n_days=365,end_date=today):
+        try:
+            tik_dum = yf.Ticker(ticker_st)
+            self.company_name=tik_dum.info['longName']
+            start_date = today - timedelta(days=n_days)
+            self.data_full = yf.download(ticker_st, start=start_date, end=end_date)
+        except:
+            raise ValueError('Loading data failed , check the stock name and date')
+    
+    def data_portion(self,n_days=7):
+        '''start date should be inserted in days''' 
+        #s_d = datetime.strptime(start_date, '%Y-%m-%d').date() #start_date='2020-07-21'
+        return self.data_full[today - timedelta(days=n_days):]
+
+
 def result_analysis(pattern_name,res_list):
     
     trend_st = None # for every other type
@@ -155,9 +171,7 @@ def rsi_calc(data) :
 def trend_detector(data):
 
     df1 = trendet.identify_df_trends(df=data,column='Close',window_size=4)
-    print(df1.head(5))
-    for col in df1.columns:
-        print(col)
+    
     lastU = df1['Up Trend'].tail(1).values[0]
     lastD = df1['Down Trend'].tail(1).values[0]
     if lastU != None:
@@ -169,7 +183,8 @@ def trend_detector(data):
 
 
 class adv_patterns():
-    def __init__(self,ticker_company,n_months_data=5):
+    def __init__(self,data_orig,n_days_data=5*30,sampling_ratio= 5):
+        '''
         import numpy as np
         self.tkr = ticker_company
         try:
@@ -177,8 +192,9 @@ class adv_patterns():
         except:
             print('error loading data')
             raise ValueError('Loading data failed , check the stock name and date')
-        
-        Xt,Yt,data_ed = self.init_data(data=data_orig.copy())
+        '''
+        data_o = data_orig[today - timedelta(days=n_days_data ):]
+        Xt,Yt,data_ed = self.init_data(data=data_o.copy(),sampling=sampling_ratio)
 
         ptx_m,pty_m = self.local_min(x_data=Xt,y_data=Yt,data=data_ed['SMA'])
         print(pty_m)
@@ -565,9 +581,16 @@ if __name__=='__main__':
     print('querry result ',q_res)
     '''
     data = load_data_df(ticker_st="MERCURYLAB.BO")
-    print(data.tail(5))
+    t2 = datetime.date(datetime.now()) + timedelta(days=2)
+    t1 = datetime.date(datetime.now()) - timedelta(days=30 )
+    sata = data[t1:t2]
+    ssata = data_loader_df(ticker_st="MERCURYLAB.BO")
+    ssata01=ssata.data_portion(n_days=25)
+
+    print('test portion data : ',ssata01)
+
     tr = trend_detector(data=data)
-    print(tr)
+    #print(tr)
     '''
     rsi = rsi_calc(data=data)
     print('test RSI',type(rsi))
@@ -580,7 +603,7 @@ if __name__=='__main__':
     
     #res = pattern_check(data=data,pattern_name='CDLMARUBOZU')
     #print(res)
-    data_l = adv_patterns(ticker_company="GOOG")
+    data_l = adv_patterns(data_orig=data)
     new_ib = {}
     new_ib['Head and Shoulders']=data_l.find_patterns_HS('Head and Shoulders')
     
