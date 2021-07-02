@@ -44,8 +44,8 @@ def load_data_df(ticker_st,start_date=three_months_ago,end_date=today):
     #tips_filtered = data.reindex(columns =  ['Open', 'High', 'Low', 'Close'])
     #col_names = list(data.index)
     try:
-        tik_dum = yf.Ticker(ticker_st)
-        tikp=tik_dum.info['longName']
+        #tik_dum = yf.Ticker(ticker_st)
+        #tikp=tik_dum.info['longName']
         data = yf.download(ticker_st, start=start_date, end=end_date)
     except:
         raise ValueError('Loading data failed , check the stock name and date')
@@ -54,8 +54,8 @@ def load_data_df(ticker_st,start_date=three_months_ago,end_date=today):
 class data_loader_df ():
     def __init__(self,ticker_st,n_days=365,end_date=today):
         try:
-            tik_dum = yf.Ticker(ticker_st)
-            self.company_name=tik_dum.info['longName']
+            #tik_dum = yf.Ticker(ticker_st)
+            self.company_name= ticker_st#tik_dum.info['longName']
             start_date = today - timedelta(days=n_days)
             self.data_full = yf.download(ticker_st, start=start_date, end=end_date)
         except:
