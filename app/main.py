@@ -14,6 +14,8 @@ from app.patterns_dic import candlestick_patterns,pattern_of_interest
 from app.pattern_detector import load_data,qtoday,pattern_check,load_data_df,rsi_calc,trend_detector,adv_patterns,data_loader_df
 from app.harmonics import harmonics_list
 
+from app.HarmonicPatterns.harmonic_functions import search_func
+
 app = Flask(__name__)
 
 @app.route('/update_companies_info/<tkr0>',methods=['GET'])
@@ -116,7 +118,8 @@ def update_stock_info(tkr0):
     new_ib['Bearish flag']=data_l.find_patterns_flag('Bearish flag')
 
     data = data0.data_portion(n_days=6*30)
-    new_ib['Harmonics']=harmonics_list(data)
+    #new_ib['Harmonics']=harmonics_list(data)
+    new_ib['Harmonics']=search_func(data)
     #info_c.append(new_ib)
 
     return jsonify(new_ib)
