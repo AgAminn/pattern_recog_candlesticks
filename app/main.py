@@ -136,7 +136,7 @@ def talib_info(tkr0):
             raise ValueError('Loading data failed , check the stock name and date')
         
         #data = load_data_df(ticker_st=tkr0)
-        data0 = data_loader_df(ticker_st=tkr0,n_days=15)
+        data0 = data_loader_df(ticker_st=tkr0,n_days=95)
         data = data0.data_portion()
         new_ib = {
             'date' : qtoday,
