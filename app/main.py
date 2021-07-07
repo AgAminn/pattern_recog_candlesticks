@@ -4,7 +4,8 @@ from flask import Flask, render_template, request, escape,jsonify
 import talib
 #from werkzeug.exceptions import MethodNotAllowed
 import yfinance as yf
-
+import pandas as pd
+from yfinance import ticker
 #import os, csv
 
 #from yfinance import ticker
@@ -13,7 +14,7 @@ import yfinance as yf
 from app.patterns_dic import candlestick_patterns,pattern_of_interest
 from app.pattern_detector import load_data,qtoday,pattern_check,load_data_df,rsi_calc,trend_detector,adv_patterns,data_loader_df
 from app.harmonics import harmonics_list
-
+from app.comapnies_dic_ed02 import company_stock_symbol
 from app.HarmonicPatterns.harmonic_functions import search_func
 
 app = Flask(__name__)
@@ -85,7 +86,7 @@ def update_companies_info(tkr0):
 def update_stock_info(tkr0):
 
     data0 = data_loader_df(ticker_st=tkr0)
-    data = data0.data_portion()
+    data = data0.data_portion(n_days=30)
     new_ib = {
         'date' : qtoday,
         'ticker/Symbol' : tkr0,
@@ -100,7 +101,7 @@ def update_stock_info(tkr0):
     new_ib['RSI']=rsi_df.tail(1).values[0]
 
     new_ib['Trend']=trend_detector(data=data)
-    
+    data = data0.data_portion(n_days=6*30)
     data_l = adv_patterns(data_orig=data,sampling_ratio=10) # one year of data for HS & inv HS
     new_ib['Head and Shoulders']=data_l.find_patterns_HS('Head and Shoulders')
     new_ib['Inv Head and Shoulders']=data_l.find_patterns_HS('Inv Head and Shoulders')
@@ -152,7 +153,7 @@ def talib_info(tkr0):
 
 @app.route('/')
 def index():
-    companies_symbols = company_dictionary.keys()
+    companies_symbols = company_stock_symbol.keys()
     #print(companies_symbols)
     pattern_res =''
     tiker_stock=''
@@ -170,5 +171,81 @@ def index():
         #print('rest' , company_name)
         list_feed = load_data(ticker_st=tiker_stock,start_date=start_date,end_date=end_date,pattern_name=pattern)
         pattern_res = 0#result_analysis(res_list=list_feed,pattern_name=pattern)
-    return render_template('index02.html',companies_symbols=company_dictionary, candlestick_patterns=candlestick_patterns,
+    return render_template('index02.html',companies_symbols=company_stock_symbol, candlestick_patterns=candlestick_patterns,
 pattern_res=pattern_res,stock=tiker_stock)
+
+
+@app.route('/test0')
+def index2():
+    def stock_data(date_q,tickers):
+        res = []
+        for tkr0 in tickers:
+            data0 = data_loader_df(ticker_st=tkr0,n_days=6*30,end_date=date_q)
+            data = data0.data_portion(n_days=90)
+            new_ib = {
+                'date' : date_q,
+                'ticker/Symbol' : tkr0,
+            }
+            for pat in pattern_of_interest.keys():
+                label = pattern_check(data=data,pattern_name=pat)
+                new_ib[pattern_of_interest[pat]]=label
+            
+            data = data0.data_portion(n_days=120)
+            rsi_df = rsi_calc(data=data)
+            new_ib['RSI']=rsi_df.tail(1).values[0]
+
+            new_ib['Trend']=trend_detector(data=data)
+            
+            data = data0.data_portion(n_days=6*30)
+            data_l = adv_patterns(data_orig=data,sampling_ratio=10) # one year of data for HS & inv HS
+            new_ib['Head and Shoulders']=data_l.find_patterns_HS('Head and Shoulders')
+            new_ib['Inv Head and Shoulders']=data_l.find_patterns_HS('Inv Head and Shoulders')
+            data_l = adv_patterns(data_orig=data,n_days_data=3*30 ,sampling_ratio=5) # 3 x months of data for DT & DB
+            new_ib['Double Bottom']=data_l.find_patterns_D('Double Bottom')
+            new_ib['Double Top']=data_l.find_patterns_D('Double Top')
+            data_l = adv_patterns(data_orig=data,n_days_data=1*30,sampling_ratio=2) # 1 x month of data for HS & inv HS
+            new_ib['Bullish penant']=data_l.find_patterns_flag('Bullish penant')
+            new_ib['Bearish penant']=data_l.find_patterns_flag('Bearish penant')
+            data_l = adv_patterns(data_orig=data,n_days_data=6*30,sampling_ratio=5) # 6 x months of data for wedges
+            new_ib['Falling wedge']=data_l.find_patterns_flag('Falling wedge')
+            new_ib['Rising wedge']=data_l.find_patterns_flag('Rising wedge')
+            data_l = adv_patterns(data_orig=data,n_days_data=3*7,sampling_ratio=2) # 3x weeks of data for flags
+            new_ib['Bullish flag']=data_l.find_patterns_flag('Bullish flag')
+            new_ib['Bearish flag']=data_l.find_patterns_flag('Bearish flag')
+
+            data = data0.data_portion(n_days=6*29)
+            #new_ib['Harmonics']=harmonics_list(data)
+            #new_ib['Harmonics']=search_func(data)
+            dicH =search_func(data)
+            for k in list(dicH.keys() ):
+                new_ib[k]=dicH[k]
+            res.append(new_ib)
+            new_ib = {}
+        return res
+
+    print('test page start')
+    companies_symbols = list(company_stock_symbol.keys())
+    end_date = request.args.get('end',False)
+    
+    print('info date ', end_date)
+    if (end_date!=False) :
+        import numpy as np
+        tab = stock_data(date_q=end_date,tickers=companies_symbols)
+        #print(list(tab[0].keys()))
+        df = pd.DataFrame(tab)
+        '''
+        #df = df.groupby(list(tab[0].keys())).sum()
+        df= df.pivot(index='ticker/Symbol',columns=['date','Closing Marubozu', 'Marubozu', 'Engulfing Pattern', 'Evening Star', 'Hammer', 'Inverted Hammer', 'Hanging Man', 
+                                                    'Shooting Star', 'Spinning Top', 'Doji', 'Doji Star', 
+                                                    'Dragonfly Doji', 'Evening Doji Star', 'Gravestone Doji', 'Morning Doji Star',
+                                                    'Morning Star', 'Piercing Pattern', 'Dark Cloud Cover', 'Three Black Crows',
+                                                    'Three Advancing White Soldiers', 'RSI', 'Trend', 'Head and Shoulders', 
+                                                    'Inv Head and Shoulders', 'Double Bottom', 'Double Top', 'Bullish penant', 
+                                                    'Bearish penant', 'Falling wedge', 'Rising wedge', 'Bullish flag', 'Bearish flag',
+                                                    'Harmonics'], aggfunc=np.sum,margins=True, fill_value=0,ag)
+        '''
+        print(df.head(2))
+        df.to_html('app/templates/index04.html')
+        return render_template('index04.html')
+    
+    return render_template('index03.html')
