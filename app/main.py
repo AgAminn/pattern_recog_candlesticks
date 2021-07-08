@@ -232,7 +232,7 @@ def index2():
         import numpy as np
         tab = stock_data(date_q=end_date,tickers=companies_symbols)
         #print(list(tab[0].keys()))
-        df = pd.DataFrame(tab)
+        #df = pd.DataFrame(tab)
         '''
         #df = df.groupby(list(tab[0].keys())).sum()
         df= df.pivot(index='ticker/Symbol',columns=['date','Closing Marubozu', 'Marubozu', 'Engulfing Pattern', 'Evening Star', 'Hammer', 'Inverted Hammer', 'Hanging Man', 
@@ -244,8 +244,9 @@ def index2():
                                                     'Bearish penant', 'Falling wedge', 'Rising wedge', 'Bullish flag', 'Bearish flag',
                                                     'Harmonics'], aggfunc=np.sum,margins=True, fill_value=0,ag)
         '''
-        print(df.head(2))
-        df.to_html('app/templates/index04.html')
-        return render_template('index04.html')
+        #print(df.head(2))
+        #df.to_html('app/templates/index04.html')
+        n_com = [i for i in range(len(tab))]
+        return render_template('index04.html', tab=tab, n_comp=n_com)
     
-    return render_template('index03.html')
+    return render_template('index04.html',tab={}, n_comp=5)
