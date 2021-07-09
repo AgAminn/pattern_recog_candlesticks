@@ -1,10 +1,10 @@
 #!"d:\c is full\jan py 2021\pattern_recog_trade\pattern_recig_tr_02\work_env41\scripts\python.exe"
-# EASY-INSTALL-ENTRY-SCRIPT: 'yfinance==0.1.60','console_scripts','sample'
+# EASY-INSTALL-ENTRY-SCRIPT: 'yfinance==0.1.62','console_scripts','sample'
 import re
 import sys
 
 # for compatibility with easy_install; see #2198
-__requires__ = 'yfinance==0.1.60'
+__requires__ = 'yfinance==0.1.62'
 
 try:
     from importlib.metadata import distribution
@@ -30,4 +30,4 @@ globals().setdefault('load_entry_point', importlib_load_entry_point)
 
 if __name__ == '__main__':
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
-    sys.exit(load_entry_point('yfinance==0.1.60', 'console_scripts', 'sample')())
+    sys.exit(load_entry_point('yfinance==0.1.62', 'console_scripts', 'sample')())

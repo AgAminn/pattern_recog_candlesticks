@@ -24,23 +24,30 @@ def check_app_load(ticker_st=list_stocks):
 def check_app_02(ticker_st=list_stocks):
     cnt =0
     err=0
+    readable_stocks = []
     for i in ticker_st:
         try :
             dt = yf.download(i,start='2021-04-01',end='2021-04-11')
             if len(dt)>1:
                 cnt+=1
+            else:
+                readable_stocks.append(i)
         except:
             err+=1
     print('error in exc ', err)
 
-    return cnt
+    return cnt,readable_stocks
         #return r.status_code ==200
         #assert(r.status_code ==200)
 
 
-res = check_app_02()#check_app_load()
+res,readable_stks = check_app_02()#check_app_load()
 
 print('finsih testing')
 #res = check_app_load()
 print('N tests           ',len(list_stocks))
 print('N successful test ',res)
+
+with open('your_file.txt', 'w') as f:
+    for item in readable_stks:
+        f.write("%s\n" % item)
