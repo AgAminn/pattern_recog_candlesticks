@@ -40,7 +40,7 @@ def check_app_02(ticker_st=list_stocks):
         #return r.status_code ==200
         #assert(r.status_code ==200)
 
-
+'''
 res,readable_stks = check_app_02()#check_app_load()
 
 print('finsih testing')
@@ -50,4 +50,16 @@ print('N successful test ',res)
 
 with open('your_file.txt', 'w') as f:
     for item in readable_stks:
+        f.write("%s\n" % item)
+'''
+file1 = open('your_file.txt', 'r')
+Lines = file1.readlines()
+linesx = [l.strip() for l in Lines]
+print('res :',len(linesx))
+#print(linesx)
+res_list = list(set(list_stocks)-set(linesx) )
+print('result disjoint list ',len(res_list))
+
+with open('working_stocks.txt', 'w') as f:
+    for item in res_list:
         f.write("%s\n" % item)
