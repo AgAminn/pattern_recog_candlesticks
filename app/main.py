@@ -120,7 +120,8 @@ def update_stock_info(tkr0):
 
     data = data0.data_portion(n_days=6*30)
     #new_ib['Harmonics']=harmonics_list(data)
-    new_ib['Harmonics']=search_func(data)
+    #new_ib['Harmonics']=search_func(data)
+    new_ib = {**new_ib,**search_func(data)}
     #info_c.append(new_ib)
 
     return jsonify(new_ib)

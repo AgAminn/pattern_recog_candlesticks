@@ -9,6 +9,7 @@ import talib
 import trendet
 #from yfinance import ticker
 from app.patterns_dic import candlestick_patterns
+from app.company_symbol_dic import company_stock_symbol
 
 #2021-06-21
 #"MERCURYLAB.BO"
@@ -52,21 +53,92 @@ def load_data_df(ticker_st,start_date=three_months_ago,end_date=today):
     return data
 
 class data_loader_df ():
+
     def __init__(self,ticker_st,n_days=365,end_date=today):
         try:
             #tik_dum = yf.Ticker(ticker_st)
-            self.company_name= ticker_st#tik_dum.info['longName']
-            start_date = today - timedelta(days=n_days)
-            self.data_full = yf.download(ticker_st, start=start_date, end=end_date)
+            try:
+                self.company_name=company_stock_symbol[ticker_st] #tik_dum.info['longName']
+            except:
+                self.company_name = ticker_st
+                print('company not recognized')
+            end__date = end_date
+            if type(end_date)==str :
+                end__date =datetime.strptime(end_date,'%Y-%m-%d')
+
+            start_date = end__date - timedelta(days=n_days)
+            #print('start date :',start_date)
+            #print('end date   :',end__date)
+            self.data_full = yf.download(ticker_st, start=start_date, end=end__date)
+            if (len(self.data_full)>1)==False:
+                end__date.strftime(fmt='%Y-%m-%d')
+                start_date.strftime(fmt='%Y-%m-%d')
+                self.data_full = self.backup_loader(ticker=ticker_st,start_date=start_date,end_date=end__date)
+                if (len(self.data_full)>1)==False:
+                    raise ValueError('Loading data failed , check the stock name and date')
+                else:
+                    print('second attempt worked')
+
         except:
-            raise ValueError('Loading data failed , check the stock name and date')
+            #raise ValueError('Loading data failed , check the stock name and date')
+            print('Loading data failed , 2 x attempts failed -- pass to next step / next stock ')
+            pass
     
     def data_portion(self,n_days=7):
         '''start date should be inserted in days''' 
         #s_d = datetime.strptime(start_date, '%Y-%m-%d').date() #start_date='2020-07-21'
-        return self.data_full[today - timedelta(days=n_days):]
+        return self.data_full.tail(n_days)
+    
+    @staticmethod
+    def backup_loader(ticker='TOAL.BO',start_date='2020-12-01',end_date='2021-07-10'):
+        '''In case yfçnance fails to load the data
+            for internal issues (and not because the ticker isn't listed'''
+        #import requests
+        #import io
+        #import pandas as pd
+        refmultiply = 86400
+        refdateyahoo = 1420156800  # This is 1/2/2015
+        date_frmt = '%Y-%m-%d'
+        refdate = datetime.strptime('2015-01-02', date_frmt)
+        enddate = datetime.date(datetime.now())
+        startdate = start_date
+        enddatetoday = end_date
+        #if type(start_date) == str:
+        startdate = datetime.strptime(start_date, date_frmt).date()
+        #if type(end_date) == str:
+        enddatetoday = datetime.strptime(end_date, date_frmt).date()
+        
+        if refdate == startdate:
+            startdateyahoo = refdateyahoo
+        else:
+            startdateyahoo = refdateyahoo + (startdate - refdate).days * refmultiply
 
+        if refdate == enddate:
+            enddateyahoo = refdateyahoo
+        elif enddate == datetime.date(datetime.now()):
+            enddateyahoo = refdateyahoo + ((enddatetoday - refdate).days+1) * refmultiply #+1 is constant for correction, normally not needed
+        else:
+            enddateyahoo = refdateyahoo + ((enddate - refdate).days+1) * refmultiply #+1 is constant for correction, normally not needed
 
+        
+        url = "https://query1.finance.yahoo.com/v7/finance/download/" + ticker + \
+            "?period1=" + str(startdateyahoo) + "&period2=" + str(enddateyahoo) + "&interval=1d&events=history"
+        #print(url)
+        fullLoad = pd.read_csv(url)
+        #print('dataframe presnt',fullLoad.tail(1))
+        #print(fullLoad.head(1))
+        fullLoad['Date'] = pd.to_datetime(fullLoad['Date'])
+        fullLoad = fullLoad.set_index('Date')
+        '''
+        # ------------ DISPLAYING RESULTS -------------
+        headers = list(fullLoad.columns.values)
+        print(tabulate(fullLoad.sort_index(ascending=False), headers, tablefmt="simple"))
+
+        ticker = input('Ticker: ').upper()
+        '''
+        return fullLoad
+    
+ 
 def result_analysis(pattern_name,res_list):
     
     trend_st = None # for every other type
@@ -459,7 +531,7 @@ class adv_patterns():
                 date_patterns=(self.Xt[i-5],self.Xt[i])
             
         if date_patterns != {}:
-            return date_patterns
+            return True#date_patterns
 
         return False#patterns
 
