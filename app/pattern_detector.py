@@ -15,10 +15,30 @@ from app.company_symbol_dic import company_stock_symbol
 #"MERCURYLAB.BO"
 qtoday = datetime.date(datetime.now())
 today = datetime.date(datetime.now()) + timedelta(days=2)
-three_months_ago = today - timedelta(days=180)
-print(today)
-print('3 months ago ',three_months_ago)
+#three_months_ago = today - timedelta(days=180)
+#print(today)
+#print('3 months ago ',three_months_ago)
 
+def import_all_data(ticker_list=['goog','aapl'],start_date="2020-06-05", end_date=today,date_frmt='%Y-%m-%d'):
+    
+    if type(start_date) == str :
+        start_date =datetime.strptime(start_date,date_frmt)
+    if type(end_date) == str :
+        end_date =datetime.strptime(end_date,date_frmt)
+    if type(start_date)==int:
+        start_date = end_date - timedelta(days=start_date)
+
+    data_grp = yf.download(tickers=ticker_list, start=start_date, end=end_date)
+    data_dic = {}
+    for stock in ticker_list:
+        try:
+            data_dic[stock.upper()] = data_grp.xs(stock.upper(),level=1,axis=1)
+        except:
+            pass
+    return data_dic
+
+
+'''
 def load_data(ticker_st,start_date=three_months_ago,end_date=today, pattern_name=''):
     data = yf.download(ticker_st, start=start_date, end=end_date)
     df_date = pd.to_datetime(data.index)
@@ -51,10 +71,10 @@ def load_data_df(ticker_st,start_date=three_months_ago,end_date=today):
     except:
         raise ValueError('Loading data failed , check the stock name and date')
     return data
-
+'''
 class data_loader_df ():
 
-    def __init__(self,ticker_st,n_days=365,end_date=today):
+    def __init__(self,ticker_st,n_days=365,end_date=today,date_frmt='%Y-%m-%d'):
         try:
             #tik_dum = yf.Ticker(ticker_st)
             try:
@@ -64,15 +84,19 @@ class data_loader_df ():
                 print('company not recognized')
             end__date = end_date
             if type(end_date)==str :
-                end__date =datetime.strptime(end_date,'%Y-%m-%d')
+                end__date =datetime.strptime(end_date,date_frmt)
+            if type(n_days)==int:
+                start_date = end__date - timedelta(days=n_days)
+            elif type(n_days)==str:
+                start_date =datetime.strptime(n_days,date_frmt)
 
-            start_date = end__date - timedelta(days=n_days)
+            #start_date = end__date - timedelta(days=n_days)
             #print('start date :',start_date)
             #print('end date   :',end__date)
             self.data_full = yf.download(ticker_st, start=start_date, end=end__date)
             if (len(self.data_full)>1)==False:
-                end__date.strftime(fmt='%Y-%m-%d')
-                start_date.strftime(fmt='%Y-%m-%d')
+                end__date.strftime(fmt=date_frmt)
+                start_date.strftime(fmt=date_frmt)
                 self.data_full = self.backup_loader(ticker=ticker_st,start_date=start_date,end_date=end__date)
                 if (len(self.data_full)>1)==False:
                     raise ValueError('Loading data failed , check the stock name and date')
@@ -239,6 +263,19 @@ def rsi_calc(data) :
     return df['RSI']
 
 
+def RSIfun(price, n=14):
+    delta = price['Close'].diff()
+    #-----------
+    dUp=
+    dDown=https://stackoverflow.com/questions/20526414/relative-strength-index-in-python-pandas
+
+    RolUp=pd.rolling_mean(dUp, n)
+    RolDown=pd.rolling_mean(dDown, n).abs()
+
+    RS = RolUp / RolDown
+    rsi= 100.0 - (100.0 / (1.0 + RS))
+    return rsi
+
 
 def trend_detector(data):
 
@@ -265,11 +302,12 @@ class adv_patterns():
             print('error loading data')
             raise ValueError('Loading data failed , check the stock name and date')
         '''
-        data_o = data_orig[today - timedelta(days=n_days_data ):]
+        #data_o = data_orig[today - timedelta(days=n_days_data ):]
+        data_o = data_orig.tail(n_days_data)
         Xt,Yt,data_ed = self.init_data(data=data_o.copy(),sampling=sampling_ratio)
 
         ptx_m,pty_m = self.local_min(x_data=Xt,y_data=Yt,data=data_ed['SMA'])
-        print(pty_m)
+        #print(pty_m)
         ptx_M,pty_M = self.local_max(x_data=Xt,y_data=Yt,data=data_ed['SMA'])
 
         self.Xt , self.Yt = self.filter_pt(ptx_min=ptx_m,pty_min=pty_m,ptx_max=ptx_M,pty_max=pty_M)
@@ -652,16 +690,16 @@ if __name__=='__main__':
     q_res,q_tr = result_analysis(res_f,pattern_name)
     print('querry result ',q_res)
     '''
-    data = load_data_df(ticker_st="MERCURYLAB.BO")
+    #data = load_data_df(ticker_st="MERCURYLAB.BO")
     t2 = datetime.date(datetime.now()) + timedelta(days=2)
     t1 = datetime.date(datetime.now()) - timedelta(days=30 )
-    sata = data[t1:t2]
+    #sata = data[t1:t2]
     ssata = data_loader_df(ticker_st="MERCURYLAB.BO")
-    ssata01=ssata.data_portion(n_days=25)
+    data=ssata.data_portion(n_days=25)
 
-    print('test portion data : ',ssata01)
+    print('test portion data : ',data)
 
-    tr = trend_detector(data=data)
+    #tr = trend_detector(data=data)
     #print(tr)
     '''
     rsi = rsi_calc(data=data)

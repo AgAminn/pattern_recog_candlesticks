@@ -4125,6 +4125,7 @@ Comapnies_symbols_BSE = {
 
 
 Comapnies_symbols_NSE = {
+    '^NSEI' : 'Nifty50',
     '20MICRONS.NS': '20 Microns Limited',
     '21STCENMGM.NS': '21st Century Management Services Limited',
     '3IINFOTECH.NS': '3i Infotech Limited',

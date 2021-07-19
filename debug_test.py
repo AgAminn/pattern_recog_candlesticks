@@ -39,7 +39,7 @@ def backup_loader(ticker='TOAL.BO',start_date="2020-12-01",end_date='2021-07-10'
     fullLoad = pd.read_csv(url)
     fullLoad['Date'] = pd.to_datetime(fullLoad['Date'])
     fullLoad = fullLoad.set_index('Date')
-    print('alt method', len(fullLoad))
+    #print('alt method', len(fullLoad))
     return fullLoad
 
 print("length of list of stocks for testing",len(list_stocks))
@@ -107,7 +107,7 @@ def check_app_05(ticker_st):
     cnt =0
     
     try :
-        dt = yf.download(ticker_st,start='2021-04-01',end='2021-04-11',)
+        dt = yf.download(ticker_st,start='2021-04-01',end='2021-04-11')
         if len(dt)>1:
             cnt +=1
             res_dic[ticker_st]= True
@@ -119,6 +119,20 @@ def check_app_05(ticker_st):
     except:
         pass
     return cnt
+
+def check_app_06(ticker_st):
+    cnt =0
+    
+    try :
+        dt = yf.download(ticker_st,start='2021-04-01',end='2021-04-11')
+        if len(dt)>1:
+            cnt +=1
+            res_dic[ticker_st]= True
+    except:
+        pass
+    return cnt
+
+
 from multiprocessing import Pool
 def chad_method(tikers=list_stocks):
     from multiprocessing import Pool
@@ -155,16 +169,50 @@ print('result disjoint list ',len(res_list))
 #with open('working_stocks.txt', 'w') as f:
 #    for item in res_list:
 #        f.write("%s\n" % item)
+def list_df(ticker_list=['goog','aapl'],start="2020-06-05", end="2021-06-10"):
+    data_grp = yf.download(tickers=ticker_list, start="2021-06-05", end="2021-06-10")
+    data_dic = {}
+    for stock in ticker_list:
+        try:
+            data_dic[stock.upper()] = data_grp.xs(stock.upper(),level=1,axis=1)
+        except:
+            pass
+    return data_dic
 
+''''''
 if __name__=='__main__':
+    import time
+    
+
     file1 = open('not_working_stocks.txt', 'r')
+    file1 = open('working_stocks.txt', 'r')
     Lines = file1.readlines()
     linesx = [l.strip() for l in Lines]
-
-    #tikers = list_stocks#['msft', 'aapl', 'twtr', 'intc', 'tsm', 'goog', 'amzn', 'fb', 'nvda']
     tikers = linesx
+    tikers = list_stocks[0:400]#['msft', 'aapl', 'twtr', 'intc', 'tsm', 'goog', 'amzn', 'fb', 'nvda']
+    '''
+    start_time = time.time()
+    df = backup_loader(ticker=list_stocks[1],start_date='2021-04-01',end_date='2021-04-11')
+    print('df len ',len(df))
+    contl = check_app_06(ticker_st=list_stocks[1])
+    print('fif it work ',contl)
+    countr = [check_app_06(ticker_st=i) for i in tikers ]
+    print('sum = ',sum(countr))
+    print("--- %s seconds ---" % (time.time() - start_time))
+    '''
+    '''
     with Pool(5) as p :
-        res_v = p.map(check_app_05,tikers)
+        res_v = p.map(check_app_06,tikers)
     print(res_dic)
     print(len(res_v))
     print(sum(res_v))
+    '''
+    start_time = time.time()
+    data = yf.download(tickers='^NSEI', start="2021-06-5", end="2021-06-10")
+    print(len(data))
+
+    #list_df = list_df(ticker_list=tikers)
+    #print('ffs work !!!!! ', len(list_df))
+
+
+    print("--- %s seconds ---" % (time.time() - start_time))

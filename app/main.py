@@ -12,9 +12,12 @@ from yfinance import ticker
 
 #from comapny_symbol_dic import company_stock_symbol as company_dictionary
 from app.patterns_dic import candlestick_patterns,pattern_of_interest
-from app.pattern_detector import load_data,qtoday,pattern_check,load_data_df,rsi_calc,trend_detector,adv_patterns,data_loader_df
+#from app.pattern_detector import load_data,qtoday,pattern_check,load_data_df,rsi_calc,trend_detector,adv_patterns,data_loader_df
+from app.pattern_detector import qtoday,pattern_check, rsi_calc,trend_detector,adv_patterns,data_loader_df
 from app.harmonics import harmonics_list
 from app.comapnies_dic_ed02 import company_stock_symbol
+from app.company_symbol_dic import company_stock_symbol as full_tickers_list
+from app.pattern_detector import import_all_data
 from app.HarmonicPatterns.harmonic_functions import search_func
 
 app = Flask(__name__)
@@ -125,6 +128,74 @@ def update_stock_info(tkr0):
     #info_c.append(new_ib)
 
     return jsonify(new_ib)
+
+
+@app.route('/update_stock_info_5000/')
+def update_stock_info_500():
+
+
+    def process_data(data_orig,st_name='goog'):
+
+        if st_name in list(full_tickers_list.keys()):
+            company_name = full_tickers_list[st_name]
+        else:
+            company_name = 'Not found in repo'
+        
+        new_ib = {
+            'date' : qtoday,
+            'ticker/Symbol' : st_name,
+            'company_name' : company_name
+        }
+        data = data_orig.tail(300)
+        for pat in pattern_of_interest.keys():
+            label = pattern_check(data=data,pattern_name=pat)
+            new_ib[pattern_of_interest[pat]]=label
+        
+        data = data_orig.tail(300)#data0.data_portion(n_days=120)
+        rsi_df = rsi_calc(data=data)
+        new_ib['RSI']=rsi_df.tail(1).values[0]
+
+        new_ib['Trend']=trend_detector(data=data)
+        data = data_orig.tail(6*30)#data0.data_portion(n_days=6*30)
+        data_l = adv_patterns(data_orig=data,sampling_ratio=10) # one year of data for HS & inv HS
+        new_ib['Head and Shoulders']=data_l.find_patterns_HS('Head and Shoulders')
+        new_ib['Inv Head and Shoulders']=data_l.find_patterns_HS('Inv Head and Shoulders')
+        data_l = adv_patterns(data_orig=data,n_days_data=3*30 ,sampling_ratio=5) # 3 x months of data for DT & DB
+        new_ib['Double Bottom']=data_l.find_patterns_D('Double Bottom')
+        new_ib['Double Top']=data_l.find_patterns_D('Double Top')
+        data_l = adv_patterns(data_orig=data,n_days_data=1*30,sampling_ratio=2) # 1 x month of data for HS & inv HS
+        new_ib['Bullish penant']=data_l.find_patterns_flag('Bullish penant')
+        new_ib['Bearish penant']=data_l.find_patterns_flag('Bearish penant')
+        data_l = adv_patterns(data_orig=data,n_days_data=6*30,sampling_ratio=5) # 6 x months of data for wedges
+        new_ib['Falling wedge']=data_l.find_patterns_flag('Falling wedge')
+        new_ib['Rising wedge']=data_l.find_patterns_flag('Rising wedge')
+        data_l = adv_patterns(data_orig=data,n_days_data=3*7,sampling_ratio=2) # 3x weeks of data for flags
+        new_ib['Bullish flag']=data_l.find_patterns_flag('Bullish flag')
+        new_ib['Bearish flag']=data_l.find_patterns_flag('Bearish flag')
+
+        data = data_orig.tail(6*30)#data0.data_portion(n_days=6*30)
+        #new_ib['Harmonics']=harmonics_list(data)
+        #new_ib['Harmonics']=search_func(data)
+        new_ib = {**new_ib,**search_func(data)}
+        return new_ib
+
+    full_stock_data={}
+    stock_list=list(full_tickers_list.keys())
+    stock_list = stock_list[:5]
+    print('stock list ',stock_list)
+    dfs = import_all_data(ticker_list=stock_list,start_date=400,end_date='2021-07-15')
+    for st in stock_list:
+        df = dfs[st]
+        print(df.head(5))
+        if len(df)>1:
+            print('lennnnnnnnnn',len(df))
+            full_stock_data[st]=process_data(df,st_name=st)
+        
+    #info_c.append(new_ib)
+
+    return jsonify(full_stock_data)
+
+
 
 
 
