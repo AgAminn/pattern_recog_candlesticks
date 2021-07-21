@@ -162,7 +162,7 @@ class data_loader_df ():
         '''
         return fullLoad
     
- 
+
 def result_analysis(pattern_name,res_list):
     
     trend_st = None # for every other type
@@ -262,12 +262,12 @@ def rsi_calc(data) :
     
     return df['RSI']
 
-
+'''
 def RSIfun(price, n=14):
     delta = price['Close'].diff()
     #-----------
-    dUp=
-    dDown=https://stackoverflow.com/questions/20526414/relative-strength-index-in-python-pandas
+    #dUp=
+    #dDown=https://stackoverflow.com/questions/20526414/relative-strength-index-in-python-pandas
 
     RolUp=pd.rolling_mean(dUp, n)
     RolDown=pd.rolling_mean(dDown, n).abs()
@@ -275,7 +275,7 @@ def RSIfun(price, n=14):
     RS = RolUp / RolDown
     rsi= 100.0 - (100.0 / (1.0 + RS))
     return rsi
-
+'''
 
 def trend_detector(data):
 
