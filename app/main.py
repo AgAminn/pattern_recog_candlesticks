@@ -21,27 +21,15 @@ from app.pattern_detector import import_all_data
 from app.HarmonicPatterns.harmonic_functions import search_func
 
 app = Flask(__name__)
-
+'''
 @app.route('/update_companies_info/<tkr0>',methods=['GET'])
 def update_companies_info(tkr0):
-    '''
-    with open('datasets/companies.csv') as f:
-        for line in f:
-            if "," not in line :
-                continue
-            symbol = line.split(',')[0]
-    '''
+    
 
     #msft = yf.Ticker("MSFT",)
     #company_name = msft.info['longName']
     #print(company_name)
-    '''
-    info_j = {
-        'ticker' : '',
-        'date' :'',
-        'engulfing':''
-    }
-    '''
+    
 
     if request.method == 'GET':
         #tkr = request.form['ticker']
@@ -83,18 +71,24 @@ def update_companies_info(tkr0):
         #info_c.append(new_ib)
 
     return jsonify(new_ib)
-
+'''
 
 @app.route('/update_stock_info/<tkr0>')
 def update_stock_info(tkr0):
 
     data0 = data_loader_df(ticker_st=tkr0)
+    if type(data0.data_full) == type(None):
+        print('-- Failed loading data --')
+        return jsonify({'Error':'Failed loading data'})
+    print('** Data loaded successfully **')
+
     data = data0.data_portion(n_days=30)
     new_ib = {
         'date' : qtoday,
         'ticker/Symbol' : tkr0,
         'company_name' : data0.company_name
     }
+    print('initialisation date ',qtoday)
     for pat in pattern_of_interest.keys():
         label = pattern_check(data=data,pattern_name=pat)
         new_ib[pattern_of_interest[pat]]=label
@@ -130,6 +124,13 @@ def update_stock_info(tkr0):
     return jsonify(new_ib)
 
 
+
+
+
+
+    
+
+# the below pages aren't required; for testing and display
 @app.route('/update_stock_info_5000/')
 def update_stock_info_500():
 
@@ -195,10 +196,6 @@ def update_stock_info_500():
 
     return jsonify(full_stock_data)
 
-
-
-
-
 @app.route('/talib_info/<tkr0>',methods=['GET'])
 def talib_info(tkr0):
 
@@ -206,6 +203,7 @@ def talib_info(tkr0):
         try:
             c_name = yf.Ticker(str(tkr0))
         except:
+            c_name = tkr0
             raise ValueError('Loading data failed , check the stock name and date')
         
         #data = load_data_df(ticker_st=tkr0)
@@ -220,7 +218,6 @@ def talib_info(tkr0):
             label = pattern_check(data=data,pattern_name=pat)
             new_ib[candlestick_patterns[pat]]=label
     return jsonify(new_ib)
-    
 
 
 @app.route('/')

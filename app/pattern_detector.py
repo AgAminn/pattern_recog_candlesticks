@@ -5,30 +5,40 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
-import talib
-import trendet
+import talib    # a classic lib for detecting patterns
+import trendet  # for detecting Up/down trend
 #from yfinance import ticker
-from app.patterns_dic import candlestick_patterns
-from app.company_symbol_dic import company_stock_symbol
+from app.patterns_dic import candlestick_patterns       #talib patterns
+from app.company_symbol_dic import company_stock_symbol #BSE & NSE
 
-#2021-06-21
-#"MERCURYLAB.BO"
-qtoday = datetime.date(datetime.now())
-today = datetime.date(datetime.now()) + timedelta(days=2)
-#three_months_ago = today - timedelta(days=180)
-#print(today)
-#print('3 months ago ',three_months_ago)
+import requests
+from sklearn.impute import SimpleImputer
+
+#date format example 2021-06-21
+qtoday = datetime.date(datetime.now())      # querry date for display
+today = datetime.date(datetime.now()) + timedelta(days=2) # setting "today's date" in the future
+                                                            # makes the yf detect the most recent results
 
 def import_all_data(ticker_list=['goog','aapl'],start_date="2020-06-05", end_date=today,date_frmt='%Y-%m-%d'):
-    
+    '''
+        Importing data of the 5000+ companies all together.
+        output : dictionnary of dataframes -> company name as key
+        inputs :
+            ticker_list : list of strs (ticker of comapanies)
+            start_date  : str or int (an integer here as in N days before enddate
+                                        or string as in input a specific date)
+            start_date :str or timestamp
+    '''
+    # converting enddate & startdate to strings
     if type(start_date) == str :
         start_date =datetime.strptime(start_date,date_frmt)
     if type(end_date) == str :
         end_date =datetime.strptime(end_date,date_frmt)
     if type(start_date)==int:
         start_date = end_date - timedelta(days=start_date)
-
+    
     data_grp = yf.download(tickers=ticker_list, start=start_date, end=end_date)
+    #saving data into dic
     data_dic = {}
     for stock in ticker_list:
         try:
@@ -38,76 +48,73 @@ def import_all_data(ticker_list=['goog','aapl'],start_date="2020-06-05", end_dat
     return data_dic
 
 
-'''
-def load_data(ticker_st,start_date=three_months_ago,end_date=today, pattern_name=''):
-    data = yf.download(ticker_st, start=start_date, end=end_date)
-    df_date = pd.to_datetime(data.index)
-    tips_filtered = data.reindex(columns =  ['Open', 'High', 'Low', 'Close'])
-    col_names = list(data.index)    
-
-    
-    #(data['Open'],data['High'],data['Low'],data['close'])
-    pattern_function = getattr(talib, pattern_name)
-
-    #print(tips_filtered.head(5))
-    #res0 = talib.CDLENGULFING(data['Open'],data['High'],data['Low'],data['Close'])
-    results = None
-    try:
-        results = pattern_function(data['Open'],data['High'],data['Low'],data['Close'])
-    except:
-        print('failed ?!')
-        pass
-    return results
-
-def load_data_df(ticker_st,start_date=three_months_ago,end_date=today):
-    
-    #df_date = pd.to_datetime(data.index)
-    #tips_filtered = data.reindex(columns =  ['Open', 'High', 'Low', 'Close'])
-    #col_names = list(data.index)
-    try:
-        #tik_dum = yf.Ticker(ticker_st)
-        #tikp=tik_dum.info['longName']
-        data = yf.download(ticker_st, start=start_date, end=end_date)
-    except:
-        raise ValueError('Loading data failed , check the stock name and date')
-    return data
-'''
 class data_loader_df ():
+    '''
+    Loading specific company's data
+    ...
 
+    Attributes
+    ----------
+    company_name : str
+        company full name
+    data_full : dataframe
+        Historic data of the company
+
+    Methods
+    -------
+    data_portion(sound=None)
+        return part of the downloaded dataframe (length ndays)
+    getCompanyName(ticker)
+        return full company name
+    '''
     def __init__(self,ticker_st,n_days=365,end_date=today,date_frmt='%Y-%m-%d'):
+        #check comapny name
+        ticker_st = ticker_st.upper()
         try:
-            #tik_dum = yf.Ticker(ticker_st)
-            try:
-                self.company_name=company_stock_symbol[ticker_st] #tik_dum.info['longName']
-            except:
+            self.company_name=company_stock_symbol[ticker_st] #tik_dum.info['longName']
+        except:
+            self.company_name = self.getComapany_name(ticker_st)
+            if self.company_name == None:
                 self.company_name = ticker_st
                 print('company not recognized')
-            end__date = end_date
-            if type(end_date)==str :
-                end__date =datetime.strptime(end_date,date_frmt)
-            if type(n_days)==int:
-                start_date = end__date - timedelta(days=n_days)
-            elif type(n_days)==str:
-                start_date =datetime.strptime(n_days,date_frmt)
-
-            #start_date = end__date - timedelta(days=n_days)
-            #print('start date :',start_date)
-            #print('end date   :',end__date)
-            self.data_full = yf.download(ticker_st, start=start_date, end=end__date)
+        
+        # converting enddate & startdate to strings
+        start_date = n_days
+        if type(n_days) == str :
+            start_date =datetime.strptime(n_days,date_frmt)
+        if type(end_date) == str :
+            end_date =datetime.strptime(end_date,date_frmt)
+        if type(n_days)==int:
+            start_date = end_date - timedelta(days=n_days)
+            start_date = start_date.strftime(date_frmt)
+        
+        # Loading data
+        self.data_full = yf.download(ticker_st, start=start_date, end=end_date)
+        try:
             if (len(self.data_full)>1)==False:
-                end__date.strftime(fmt=date_frmt)
+                end_date.strftime(fmt=date_frmt)
                 start_date.strftime(fmt=date_frmt)
-                self.data_full = self.backup_loader(ticker=ticker_st,start_date=start_date,end_date=end__date)
+                self.data_full = self.backup_loader(ticker=ticker_st,start_date=start_date,end_date=end_date)
                 if (len(self.data_full)>1)==False:
                     raise ValueError('Loading data failed , check the stock name and date')
                 else:
                     print('second attempt worked')
-
         except:
-            #raise ValueError('Loading data failed , check the stock name and date')
             print('Loading data failed , 2 x attempts failed -- pass to next step / next stock ')
-            pass
-    
+            self.data_full = None
+        
+        if type(self.data_full) != type(None) : #it looks wierd but it works
+            if 'Low' not in self.data_full.columns:
+                self.data_full.Low = self.data_full.Open
+            if 'High' not in self.data_full.columns:
+                self.data_full.High = self.data_full.Close
+            
+            assert 'Open' in self.data_full.columns
+            assert 'High' in self.data_full.columns
+            assert 'Low' in self.data_full.columns
+            assert 'Close' in self.data_full.columns
+            self.data_full = self.__impute_missing_values(self.data_full)
+            
     def data_portion(self,n_days=7):
         '''start date should be inserted in days''' 
         #s_d = datetime.strptime(start_date, '%Y-%m-%d').date() #start_date='2020-07-21'
@@ -116,7 +123,8 @@ class data_loader_df ():
     @staticmethod
     def backup_loader(ticker='TOAL.BO',start_date='2020-12-01',end_date='2021-07-10'):
         '''In case yfçnance fails to load the data
-            for internal issues (and not because the ticker isn't listed'''
+            for internal issues (and not because the ticker isn't listed
+            data is scraped directly from yahoo finance website'''
         #import requests
         #import io
         #import pandas as pd
@@ -162,6 +170,33 @@ class data_loader_df ():
         '''
         return fullLoad
     
+    @staticmethod
+    def getComapany_name (text):
+        import requests
+        r = requests.get('https://api.iextrading.com/1.0/ref-data/symbols')
+        stockList = r.json()
+        for st in stockList:
+            if st['symbol']==text:
+                return st['name']
+        return None
+    
+    def __impute_missing_values(self,stock_data):
+        """
+            Missing values imputation.
+        """
+
+        imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
+        imputted = imputer.fit_transform(stock_data.values)
+
+        imputted_df = pd.DataFrame(imputted)
+        assert stock_data.shape == imputted_df.shape
+        assert imputted_df.isnull().values.any() == 0
+
+        imputted_df.columns = stock_data.columns
+        imputted_df.index = stock_data.index
+        stock_data = imputted_df
+
+        return stock_data
 
 def result_analysis(pattern_name,res_list):
     
@@ -215,17 +250,8 @@ def pattern_check(data,pattern_name):
         else:
             return False
 
-'''
-def trend_detector():
 
-
-class patten_detected():
-
-    def __init__(self):
-        pass
-'''     
-
-def rsi_calc(data) :
+'''def rsi_calc(data) :
     #df = yf.download("MERCURYLAB.BO", start=start_date, end=end_date)
     df=data
     df_date = pd.to_datetime(df.index)
@@ -263,24 +289,46 @@ def rsi_calc(data) :
     return df['RSI']
 
 '''
-def RSIfun(price, n=14):
-    delta = price['Close'].diff()
-    #-----------
-    #dUp=
-    #dDown=https://stackoverflow.com/questions/20526414/relative-strength-index-in-python-pandas
+def rsi_calc(data):
+    """
+    Relative Strength Index over period days.
+    """
+    df = data.copy()
+    close = df.Close
+    delta = close.diff()
+    up, down = delta.copy(), delta.copy()
 
-    RolUp=pd.rolling_mean(dUp, n)
-    RolDown=pd.rolling_mean(dDown, n).abs()
+    up[up < 0] = 0
+    down[down > 0] = 0
 
-    RS = RolUp / RolDown
-    rsi= 100.0 - (100.0 / (1.0 + RS))
-    return rsi
-'''
+    # Calculate the exponential moving averages (EWMA)
+    roll_up = up.ewm(com=14 - 1, adjust=False).mean()
+    roll_down = down.ewm(com=14 - 1, adjust=False).mean().abs()
+
+    # Calculate RS based on exponential moving average (EWMA)
+    rs = roll_up / roll_down   # relative strength =  average gain/average loss
+
+    rsi = 100-(100/(1+rs))
+    df['RSI'] = rsi
+
+    return df['RSI']
+
+
+
 
 def trend_detector(data):
+    '''
+    Detect data trend
+    output : Uptrend / DownTrend / Sideways
 
+            PS: output can be also 'SW / None', means there is
+            a problem in analysing the data. in those cases 
+            it's probably sw.
+
+    '''
     df1 = trendet.identify_df_trends(df=data,column='Close',window_size=4)
-    
+    if ('Up Trend' not in df1.columns) or ('Down Trend' not in df1.columns):
+        return 'SW / None'
     lastU = df1['Up Trend'].tail(1).values[0]
     lastD = df1['Down Trend'].tail(1).values[0]
     if lastU != None:
@@ -292,6 +340,13 @@ def trend_detector(data):
 
 
 class adv_patterns():
+    '''
+    advanced analysis for detecting different types of flag patterns
+    HS / IHS and Double bottom/tops patterns
+    input : dataframe
+    output : True/false for each pattern type 
+
+    '''
     def __init__(self,data_orig,n_days_data=5*30,sampling_ratio= 5):
         '''
         import numpy as np
@@ -536,12 +591,16 @@ class adv_patterns():
                 date_patterns[pat_name]=(self.Xt[i-5],self.Xt[i])
             
         if patterns != {}:
-            return date_patterns
+            return True#date_patterns
 
         return False#patterns
 
     
     def find_patterns_HS(self,pat_name):
+        '''
+        Detect inv / Head & Shoulder patterns
+            return : True / False
+        '''
         from collections import defaultdict  
         max_min = self.Yt
         patterns = defaultdict(list)
@@ -574,6 +633,10 @@ class adv_patterns():
         return False#patterns
 
     def find_patterns_flag(self,pat_name):
+        '''
+        Detect flag , wedges, pennant patterns
+        return : True / False
+        '''
         from collections import defaultdict  
         max_min = self.Yt
         patterns = defaultdict(list)
@@ -606,11 +669,15 @@ class adv_patterns():
                 date_patterns=(self.Xt[i-6],self.Xt[i])
             
         if date_patterns != {}:
-            return date_patterns
+            return True#date_patterns
 
         return False#patterns
 
     def find_patterns_flag_wedge(self,pat_name):
+        '''
+        Detect Flag wedge pattern
+            return : True / False
+        '''
         from collections import defaultdict  
         max_min = self.Yt
         patterns = defaultdict(list)
@@ -637,11 +704,15 @@ class adv_patterns():
                 date_patterns=(self.Xt[i-6],self.Xt[i])
             
         if date_patterns != {}:
-            return date_patterns
+            return True#date_patterns
 
         return False#patterns
 
     def find_patterns_D(self,pat_name):
+        '''
+        Detect Double bottom / top pattern in the last 3 months
+            return True / False
+        '''
         from collections import defaultdict  
         max_min = self.Yt
         date_patterns = {}
@@ -666,7 +737,7 @@ class adv_patterns():
                 date_patterns=(self.Xt[i-5],self.Xt[i])
             
         if date_patterns != {}:
-            return date_patterns
+            return True#date_patterns
 
         return False
 
@@ -694,8 +765,11 @@ if __name__=='__main__':
     t2 = datetime.date(datetime.now()) + timedelta(days=2)
     t1 = datetime.date(datetime.now()) - timedelta(days=30 )
     #sata = data[t1:t2]
-    ssata = data_loader_df(ticker_st="MERCURYLAB.BO")
-    data=ssata.data_portion(n_days=25)
+    ssata = data_loader_df(ticker_st="MERCURYLAB.BO",n_days=t1,end_date=t2)
+    
+    
+    print('loading data finished ******')
+    data=ssata.data_portion(n_days=65)
 
     print('test portion data : ',data)
 
