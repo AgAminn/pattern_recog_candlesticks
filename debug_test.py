@@ -132,6 +132,14 @@ def check_app_06(ticker_st):
         pass
     return cnt
 
+def check_app_10(ticker_st):
+    cnt =0
+    r = requests.head("https://indian-tiger.herokuapp.com/update_stock_info/"+ticker_st)
+    if r.status_code == 200:
+        cnt+=1
+    return cnt
+
+
 
 from multiprocessing import Pool
 def chad_method(tikers=list_stocks):
@@ -189,7 +197,7 @@ if __name__=='__main__':
     Lines = file1.readlines()
     linesx = [l.strip() for l in Lines]
     tikers = linesx
-    tikers = list_stocks[0:400]#['msft', 'aapl', 'twtr', 'intc', 'tsm', 'goog', 'amzn', 'fb', 'nvda']
+    tikers = list_stocks#['msft', 'aapl', 'twtr', 'intc', 'tsm', 'goog', 'amzn', 'fb', 'nvda']
     '''
     start_time = time.time()
     df = backup_loader(ticker=list_stocks[1],start_date='2021-04-01',end_date='2021-04-11')
@@ -207,12 +215,49 @@ if __name__=='__main__':
     print(len(res_v))
     print(sum(res_v))
     '''
+    
     start_time = time.time()
-    data = yf.download(tickers='^NSEI', start="2021-06-5", end="2021-06-10")
-    print(len(data))
+    #data = yf.download(tickers=tikers, start="2021-06-5", end="2021-06-10")
+    #print('ducc ',data)
 
-    #list_df = list_df(ticker_list=tikers)
-    #print('ffs work !!!!! ', len(list_df))
+    list_dfs = list_df(ticker_list=tikers)
+    print('ffs work !!!!! ', len(list(list_dfs.keys() )  ))
+    len0 = []
+    res_list = []
+    #print(sum(list_dfs['UTIQUE.BO'].Close))
+    for i in tikers:
+        #print(sum(list_dfs[i].Close))
+        if (sum(list_dfs[i].Close))>10:
+            res_list.append(i)
+            len0.append(1)
+        else:
+            len0.append(0)
+    print('N loading stocks ',sum(len0))
+    '''res_list = []
+    for i in range(len(tikers)):
+        if len0[i]==1:
+            res_list.append(tikers[i])'''
+    
+    with open('working_stocks_25_07_ed2.txt', 'w') as f:
+        for item in res_list:
+            f.write("%s\n" % item)
+    
 
 
     print("--- %s seconds ---" % (time.time() - start_time))
+    
+    '''    
+    with Pool(5) as p :
+        res_v = p.map(check_app_10,tikers)
+    #print(res_dic)
+    print('N tests  ',len(res_v))
+    print('N successful tests ',sum(res_v))
+    res_list = []
+    for i in range(len(tikers)):
+        if res_v[i]==1:
+            res_list.append(tikers[i])
+    
+    with open('working_stocks_25_07.txt', 'w') as f:
+        for item in res_list:
+            f.write("%s\n" % item)
+    '''
